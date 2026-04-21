@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eluru Village Issues Dashboard Builder</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <section class="panel intro-panel">
+        <p class="eyebrow">Workbook-Matched Dashboard Builder</p>
+        <h1>Eluru Village Issues Dashboard</h1>
+        <p class="intro-copy">
+          Enter village issue records, preview the dashboard on the page, and download an Excel file that keeps the same template colors and chart layout as the provided workbook.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Issue Input</h2>
+          <span id="form-mode-badge" class="badge">New Record</span>
+        </div>
+
+        <form id="issue-form" class="issue-form">
+          <input type="hidden" id="record-id">
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Issue Type</span>
+              <select id="issue-type" required>
+                <option value="">Select issue type</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Police Station</span>
+              <select id="police-station" required>
+                <option value="">Select police station</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Sub-Division</span>
+              <input id="sub-division" type="text" placeholder="Auto-filled" readonly>
+            </label>
+
+            <label class="field">
+              <span>Category</span>
+              <select id="category" required>
+                <option value="">Select category</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Village / Ward</span>
+              <input id="village" type="text" maxlength="120" placeholder="Enter village or ward name" required>
+            </label>
+
+            <label class="field">
+              <span>Party Combination</span>
+              <input id="party-combination" type="text" list="party-combination-list" placeholder="Use for political issues">
+              <datalist id="party-combination-list"></datalist>
+            </label>
+
+            <label class="field field-full">
+              <span>Issue Summary</span>
+              <input id="issue-summary" type="text" maxlength="180" placeholder="Short dashboard-friendly summary">
+            </label>
+
+            <label class="field field-full">
+              <span>Issue Details</span>
+              <textarea id="issue-details" rows="5" maxlength="4000" placeholder="Detailed issue description"></textarea>
+            </label>
+
+            <label class="field field-full">
+              <span>Action Taken</span>
+              <textarea id="action-taken" rows="3" maxlength="2000" placeholder="Police action taken"></textarea>
+            </label>
+
+            <label class="field field-full">
+              <span>Present Status</span>
+              <textarea id="present-status" rows="3" maxlength="2000" placeholder="Current status of the issue"></textarea>
+            </label>
+
+            <label class="field field-full">
+              <span>Remarks</span>
+              <textarea id="remarks" rows="2" maxlength="1200" placeholder="Optional additional remarks"></textarea>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button class="button button-primary" type="submit" id="save-record-button">Save Record</button>
+            <button class="button button-secondary" type="button" id="reset-form-button">Clear Form</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Controls</h2>
+          <span id="record-count-badge" class="badge badge-accent">0 Records</span>
+        </div>
+
+        <div class="control-stack">
+          <label class="field">
+            <span>Report Date</span>
+            <input id="report-date" type="date">
+          </label>
+
+          <div class="button-grid">
+            <button class="button button-secondary" type="button" id="load-sample-button">Load Sample Data</button>
+            <button class="button button-secondary" type="button" id="clear-data-button">Clear All Data</button>
+            <button class="button button-primary" type="button" id="download-button">Download Dashboard Excel</button>
+          </div>
+
+          <div id="workbook-meta" class="meta-box"></div>
+          <div id="status-message" class="status-message">Loading workbook data...</div>
+        </div>
+      </section>
+
+      <section class="panel records-panel">
+        <div class="panel-header">
+          <h2>Input Records</h2>
+          <input id="record-search" class="search-input" type="search" placeholder="Search village, PS, issue type">
+        </div>
+
+        <div class="table-wrap compact-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Issue Type</th>
+                <th>PS</th>
+                <th>Village</th>
+                <th>Category</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="records-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </aside>
+
+    <main class="dashboard-area">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Live Dashboard Preview</p>
+          <h2 id="hero-title">VILLAGE ISSUES &amp; LAW AND ORDER - ELURU DISTRICT</h2>
+          <p id="hero-subtitle">Status Report preview</p>
+        </div>
+        <div class="hero-meta">
+          <span class="hero-chip" id="hero-date-chip">As on --</span>
+          <span class="hero-chip" id="hero-total-chip">0 Total Issues</span>
+        </div>
+      </section>
+
+      <nav class="tab-bar" aria-label="Dashboard Sheets">
+        <button class="tab-button is-active" type="button" data-tab="executive">Executive Dashboard</button>
+        <button class="tab-button" type="button" data-tab="pswise">PS-Wise Analysis</button>
+        <button class="tab-button" type="button" data-tab="category">Category Analysis</button>
+        <button class="tab-button" type="button" data-tab="political">Political Analysis</button>
+        <button class="tab-button" type="button" data-tab="action">Action Tracker</button>
+      </nav>
+
+      <section class="tab-panel is-active" data-tab-panel="executive">
+        <div class="kpi-grid">
+          <article class="kpi-card kpi-card-total">
+            <p class="kpi-label">TOTAL ISSUES</p>
+            <p class="kpi-value" id="kpi-total-issues">0</p>
+            <p class="kpi-note">Across all categories</p>
+          </article>
+          <article class="kpi-card kpi-card-political">
+            <p class="kpi-label">POLITICAL</p>
+            <p class="kpi-value" id="kpi-political-issues">0</p>
+            <p class="kpi-note" id="kpi-political-note">No issues reported</p>
+          </article>
+          <article class="kpi-card kpi-card-general">
+            <p class="kpi-label">GENERAL</p>
+            <p class="kpi-value" id="kpi-general-issues">0</p>
+            <p class="kpi-note" id="kpi-general-note">No issues reported</p>
+          </article>
+          <article class="kpi-card kpi-card-caste">
+            <p class="kpi-label">CASTE / COMMUNAL</p>
+            <p class="kpi-value" id="kpi-caste-communal-issues">0</p>
+            <p class="kpi-note" id="kpi-caste-communal-note">Caste:0 | Communal:0</p>
+          </article>
+        </div>
+
+        <div class="dashboard-grid dashboard-grid-executive">
+          <section class="sheet-card">
+            <div class="sheet-card-header">
+              <h3>Sub-Division Wise Summary</h3>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Sub-Division</th>
+                    <th>Caste Conflicts</th>
+                    <th>Political Issues</th>
+                    <th>Communal Issues</th>
+                    <th>General Issues</th>
+                    <th>Total Issues</th>
+                    <th>% Share</th>
+                  </tr>
+                </thead>
+                <tbody id="executive-summary-body"></tbody>
+                <tfoot id="executive-summary-foot"></tfoot>
+              </table>
+            </div>
+          </section>
+
+          <section class="sheet-card">
+            <div class="sheet-card-header">
+              <h3>Issue Category Distribution</h3>
+            </div>
+            <div class="chart-card">
+              <div id="issue-distribution-chart" class="chart-host"></div>
+            </div>
+          </section>
+
+          <section class="sheet-card sheet-card-wide">
+            <div class="sheet-card-header">
+              <h3>Issue Breakdown by Sub-Division</h3>
+            </div>
+            <div class="chart-card">
+              <div id="subdivision-breakdown-chart" class="chart-host"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-tab-panel="pswise">
+        <div class="dashboard-grid dashboard-grid-double">
+          <section class="sheet-card">
+            <div class="sheet-card-header">
+              <h3>PS-Wise Issue Details</h3>
+            </div>
+            <div class="table-wrap table-wrap-tall">
+              <table>
+                <thead>
+                  <tr>
+                    <th>S.No</th>
+                    <th>Name of PS</th>
+                    <th>Sub-Division</th>
+                    <th>Caste Conflicts</th>
+                    <th>Political Issues</th>
+                    <th>Communal Issues</th>
+                    <th>General Issues</th>
+                    <th>Total</th>
+                    <th>Severity</th>
+                  </tr>
+                </thead>
+                <tbody id="pswise-body"></tbody>
+                <tfoot id="pswise-foot"></tfoot>
+              </table>
+            </div>
+          </section>
+
+          <section class="sheet-card">
+            <div class="sheet-card-header">
+              <h3>Top 10 Police Stations by Number of Issues</h3>
+            </div>
+            <div class="chart-card">
+              <div id="top-stations-chart" class="chart-host"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-tab-panel="category">
+        <div class="legend-grid">
+          <article class="legend-card legend-card-a">
+            <h3>Category A</h3>
+            <p>High alert. Active disputes with high risk of violence and immediate police attention.</p>
+          </article>
+          <article class="legend-card legend-card-b">
+            <h3>Category B</h3>
+            <p>Watch list. Disputes are under control but still need regular monitoring and counselling.</p>
+          </article>
+          <article class="legend-card legend-card-c">
+            <h3>Category C</h3>
+            <p>Peaceful. Dispute has subsided and only periodic watch is required.</p>
+          </article>
+        </div>
+
+        <div class="dashboard-grid dashboard-grid-double">
+          <section class="sheet-card">
+            <div class="sheet-card-header">
+              <h3>Issue Count by Category</h3>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Issue Type</th>
+                    <th>Category A</th>
+                    <th>Category B</th>
+                    <th>Category C</th>
+                    <th>Total</th>
+                    <th>% of Grand Total</th>
+                  </tr>
+                </thead>
+                <tbody id="category-body"></tbody>
+                <tfoot id="category-foot"></tfoot>
+              </table>
+            </div>
+          </section>
+
+          <section class="sheet-card">
+            <div class="sheet-card-header">
+              <h3>Category (A/B/C) Distribution by Issue Type</h3>
+            </div>
+            <div class="chart-card">
+              <div id="category-distribution-chart" class="chart-host"></div>
+            </div>
+          </section>
+
+          <section class="sheet-card sheet-card-wide">
+            <div class="sheet-card-header">
+              <h3>Overall Category Split</h3>
+            </div>
+            <div class="chart-card">
+              <div id="category-split-chart" class="chart-host"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-tab-panel="political">
+        <div class="dashboard-grid dashboard-grid-double">
+          <section class="sheet-card">
+            <div class="sheet-card-header">
+              <h3>Party-Wise Conflict Breakdown</h3>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Party Combination</th>
+                    <th>Sub-Division</th>
+                    <th>No. of PSs Affected</th>
+                    <th>No. of Issues</th>
+                    <th>Category</th>
+                    <th>Present Status</th>
+                  </tr>
+                </thead>
+                <tbody id="political-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="sheet-card">
+            <div class="sheet-card-header">
+              <h3>Political Issues by Party Combination</h3>
+            </div>
+            <div class="chart-card">
+              <div id="political-chart" class="chart-host"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-tab-panel="action">
+        <section class="sheet-card">
+          <div class="sheet-card-header">
+            <h3>Village Issue Action Status Tracker</h3>
+          </div>
+          <div class="table-wrap table-wrap-tall">
+            <table>
+              <thead>
+                <tr>
+                  <th>S.No</th>
+                  <th>PS</th>
+                  <th>Village</th>
+                  <th>Issue Summary</th>
+                  <th>Category</th>
+                  <th>Alert Level</th>
+                  <th>Action Taken</th>
+                  <th>Present Status</th>
+                </tr>
+              </thead>
+              <tbody id="action-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
